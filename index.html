@@ -1,20 +1,37 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تشخيص الجلد النهائي</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f4f9; text-align: center; padding: 20px; color: #333; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        video { width: 100%; border-radius: 10px; border: 3px solid #ddd; background: #000; min-height: 250px; }
+        body { font-family: sans-serif; background-color: #f0f2f5; text-align: center; padding: 20px; }
+        
+        .container { 
+            max-width: 400px; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+
+        video { 
+            width: 100%; 
+            border-radius: 15px; 
+            border: 3px solid #ddd; 
+            background: #000; 
+            min-height: 250px; 
+        }
         
         #status-box { 
             margin: 20px 0; 
             padding: 15px; 
-            border-radius: 8px; 
+            border-radius: 10px; 
             font-weight: bold; 
-            background: #e9ecef; 
+            background: #fff3cd; 
+            color: #856404;
+            font-size: 1.1rem;
         }
 
         button {
@@ -26,13 +43,16 @@
             transition: 0.3s;
             width: 100%;
             font-weight: bold;
+            color: white;
+            background-color: #ccc; /* لون رمادي في البداية */
         }
 
-        /* حالة الزر غير المفعل */
-        button:disabled { background-color: #ccc; color: #666; cursor: not-allowed; }
+        /* عندما يصبح الزر جاهزاً */
+        button.ready {
+            background-color: #007bff; /* أزرق */
+            box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+        }
         
-        /* حالة الزر المفعل */
-        button.ready { background-color: #007bff; color: white; }
         button.ready:active { transform: scale(0.95); }
 
     </style>
@@ -40,13 +60,13 @@
 <body>
 
     <div class="container">
-        <h2>🩺 الفحص النهائي</h2>
+        <h2>🩺 الفحص النهائي للجلد</h2>
         
         <video id="webcam" autoplay playsinline muted></video>
 
-        <div id="status-box">⏳ جاري تحميل ملفات الذكاء...</div>
+        <div id="status-box">⏳ جاري تجهيز الذكاء الاصطناعي... انتظر</div>
 
-        <button id="startBtn" onclick="startCamera()" disabled>انتظر قليلاً...</button>
+        <button id="startBtn" onclick="startCamera()" disabled>جاري التحميل...</button>
     </div>
 
     <script src="./edge-impulse-standalone.js" onload="libraryLoaded()" onerror="libraryError()"></script>
@@ -56,28 +76,32 @@
         const btn = document.getElementById('startBtn');
         let classifier;
 
-        // 1. هذه الدالة تعمل تلقائياً بمجرد تحميل الملف بنجاح
+        // 1. تعمل هذه الدالة تلقائياً عند انتهاء التحميل
         function libraryLoaded() {
-            statusBox.innerText = "✅ الملفات جاهزة! اضغط الزر الأزرق.";
-            statusBox.style.background = "#d4edda"; // أخضر فاتح
+            statusBox.innerText = "✅ النظام جاهز! اضغط الزر الأزرق.";
+            statusBox.style.background = "#d4edda"; 
             statusBox.style.color = "#155724";
             
-            btn.innerText = "تشغيل الكاميرا والفحص";
+            btn.innerText = "تشغيل الفحص الآن";
             btn.disabled = false; // تفعيل الزر
-            btn.classList.add('ready');
+            btn.classList.add('ready'); // تغيير لونه للأزرق
         }
 
-        // في حال فشل تحميل الملف
+        // في حال فشل التحميل
         function libraryError() {
-            statusBox.innerText = "❌ فشل تحميل الملف! تأكد من النت.";
+            statusBox.innerText = "❌ فشل تحميل الملف! تأكد من الإنترنت.";
             statusBox.style.background = "#f8d7da";
             statusBox.style.color = "#721c24";
         }
 
         async function startCamera() {
             const video = document.getElementById('webcam');
-            btn.style.display = 'none'; // إخفاء الزر
-            statusBox.innerText = "📸 جاري تشغيل الكاميرا...";
+            
+            // تغيير حالة الزر
+            btn.style.display = 'none'; 
+            statusBox.innerText = "📸 جاري تشغيل الكاميرا وتحليل الصورة...";
+            statusBox.style.background = "#cce5ff";
+            statusBox.style.color = "#004085";
 
             try {
                 // تشغيل الكاميرا الخلفية
@@ -86,40 +110,40 @@
                 });
                 video.srcObject = stream;
 
-                statusBox.innerText = "🧠 جاري تهيئة العقل الإلكتروني...";
-                
                 // بدء الذكاء الاصطناعي
+                if (!window.EdgeImpulseClassifier) {
+                    throw new Error("لم يتم تحميل المكتبة بشكل صحيح");
+                }
+
                 classifier = new EdgeImpulseClassifier();
                 await classifier.init();
 
-                statusBox.innerText = "وجه الكاميرا على الجلد الآن...";
-                statusBox.style.background = "#fff3cd"; // أصفر
-                statusBox.style.color = "#856404";
+                statusBox.innerText = "وجه الكاميرا على الجلد...";
+                statusBox.style.background = "white";
+                statusBox.style.border = "2px solid #007bff";
 
                 // حلقة الفحص المستمر
                 setInterval(async () => {
                     try {
                         const results = await classifier.classify(video);
                         if (results.results.length > 0) {
-                            // ترتيب النتائج واختيار الأفضل
+                            // أخذ أعلى نتيجة
                             const best = results.results.reduce((a, b) => a.value > b.value ? a : b);
                             
                             // عرض النتيجة
                             statusBox.innerHTML = `
-                                <span style="font-size: 24px; display:block; margin-bottom:5px;">${best.label}</span>
-                                <span style="font-size: 16px; color: #555;">الدقة: ${(best.value * 100).toFixed(1)}%</span>
+                                <span style="font-size: 24px; display:block; margin-bottom:5px; color: #2c3e50;">${best.label}</span>
+                                <span style="font-size: 16px; color: #555;">نسبة التأكد: ${(best.value * 100).toFixed(1)}%</span>
                             `;
-                            statusBox.style.background = "#fff";
-                            statusBox.style.border = "2px solid #007bff";
                         }
                     } catch (e) {
-                        console.log("Reading...");
+                        console.log("Analyzing...");
                     }
-                }, 500); // فحص كل نصف ثانية
+                }, 1000); // فحص كل ثانية لتخفيف الضغط
 
             } catch (err) {
                 statusBox.innerText = "⚠️ خطأ: " + err.message;
-                statusBox.style.color = "red";
+                statusBox.style.background = "#f8d7da";
                 btn.style.display = 'block';
                 btn.innerText = "حاول مرة أخرى";
             }
