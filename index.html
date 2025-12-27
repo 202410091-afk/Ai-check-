@@ -3,128 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المكتشف الذكي</title>
+    <title>صائد الأشباح البرمجي</title>
     <style>
-        body { font-family: sans-serif; background-color: #f8f9fa; text-align: center; padding: 20px; color: #333; }
-        .container { max-width: 420px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        video { width: 100%; border-radius: 15px; background: #000; min-height: 250px; }
-        
+        body { font-family: sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #status-box { 
-            margin: 15px 0; 
-            padding: 15px; 
-            border-radius: 10px; 
-            font-weight: bold; 
-            background: #e9ecef; 
-            font-size: 0.95rem;
-            word-wrap: break-word; /* لضمان عدم خروج النص الطويل */
+            margin: 20px 0; padding: 15px; border-radius: 10px; 
+            background: #fff3cd; color: #856404; font-weight: bold; word-break: break-all;
         }
-
-        button {
-            padding: 15px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 12px;
-            width: 100%;
-            font-weight: bold;
-            color: white;
-            background-color: #6c757d; /* رمادي */
-            pointer-events: none;
-            transition: 0.3s;
-        }
-
-        button.ready { background-color: #28a745; pointer-events: auto; } /* أخضر */
+        button { padding: 15px; width: 100%; border: none; border-radius: 10px; background: #ccc; color: white; font-weight: bold; font-size: 18px; }
+        button.ready { background: #007bff; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h3>🔍 المكتشف الذكي للملفات</h3>
-        
-        <video id="webcam" autoplay playsinline muted></video>
-
-        <div id="status-box">⏳ جاري البحث عن اسم المعالج...</div>
-
-        <button id="startBtn">انتظر قليلاً...</button>
+        <h2>👻 صائد الأشباح</h2>
+        <p>جاري البحث عن اسم الملف المخفي...</p>
+        <div id="status-box">⏳ لحظة من فضلك...</div>
+        <button id="btn" disabled>انتظر التحليل</button>
     </div>
 
     <script>
         const statusBox = document.getElementById('status-box');
-        const btn = document.getElementById('startBtn');
-        let FoundClass = null; // هنا سنخزن الاسم الصحيح الذي سنجده
+        const btn = document.getElementById('btn');
+        
+        // 1. تسجيل محتويات الذاكرة الحالية (قبل تحميل الملف)
+        window.initialKeys = Object.keys(window);
 
-        // دالة تعمل عند انتهاء تحميل الملف
-        window.startDiscovery = function() {
-            console.log("File loaded. Starting discovery...");
-            
-            // 1. البحث عن الأسماء المحتملة في ذاكرة المتصفح
-            const candidates = Object.keys(window).filter(key => 
-                key.toLowerCase().includes('edge') || 
-                key.toLowerCase().includes('impulse') ||
-                key.toLowerCase().includes('classifier')
-            );
-
-            // 2. محاولة تحديد الاسم الصحيح
-            if (window.EdgeImpulseClassifier) {
-                FoundClass = window.EdgeImpulseClassifier;
-                statusBox.innerHTML = "✅ تم العثور عليه باسم: <br> EdgeImpulseClassifier";
-            } else if (candidates.length > 0) {
-                // نأخذ أول اسم نجده يبدو صحيحاً
-                FoundClass = window[candidates[0]];
-                statusBox.innerHTML = `✅ وجدنا اسماً بديلاً: <br> ${candidates[0]}`;
-                console.log("Found alternative:", candidates[0]);
-            } else {
-                statusBox.innerHTML = "⚠️ الملف تحمل، لكن الاسم مخفي! <br> جرب تحميل الصفحة.";
-                statusBox.style.background = "#fff3cd";
-                return;
-            }
-
-            // 3. تفعيل الزر
-            statusBox.style.background = "#d4edda"; 
-            statusBox.style.color = "#155724";
-            btn.innerText = "تشغيل النظام الآن 🚀";
-            btn.classList.add('ready');
-            btn.onclick = runSystem;
-        };
-
-        // دالة الخطأ
-        window.fileError = function() {
-            statusBox.innerText = "❌ فشل تحميل ملف JS. تأكد من الاسم في GitHub.";
+        // 2. صائد الأخطاء المخفية
+        window.onerror = function(message, source, lineno, colno, error) {
+            statusBox.innerHTML = `🚨 <b>تم كشف خطأ:</b><br>${message}`;
             statusBox.style.background = "#f8d7da";
+            statusBox.style.color = "#721c24";
+            return true;
         };
 
-        async function runSystem() {
-            btn.style.display = 'none';
-            statusBox.innerText = "📸 الكاميرا تعمل... جاري التحليل";
+        // 3. دالة التحليل بعد التحميل
+        function analyzeMemory() {
+            console.log("File loaded. Analyzing...");
             
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                document.getElementById('webcam').srcObject = stream;
+            // مقارنة الذاكرة الجديدة بالقديمة
+            const currentKeys = Object.keys(window);
+            const newVars = currentKeys.filter(key => !window.initialKeys.includes(key));
+            
+            // تصفية المتغيرات غير المهمة
+            const ghosts = newVars.filter(k => k !== 'initialKeys' && k !== 'analyzeMemory' && k !== 'onerror');
 
-                // استخدام الاسم الذي اكتشفناه
-                const classifier = new FoundClass();
-                await classifier.init();
-
-                statusBox.innerText = "وجه الكاميرا على الجلد...";
-                statusBox.style.background = "white";
-                statusBox.style.border = "2px solid #28a745";
-
-                setInterval(async () => {
-                    try {
-                        const results = await classifier.classify(document.getElementById('webcam'));
-                        if (results.results.length > 0) {
-                            const best = results.results.reduce((a, b) => a.value > b.value ? a : b);
-                            statusBox.innerHTML = `<span style="font-size:1.5rem;color:#28a745">${best.label}</span> <br> ${Math.round(best.value * 100)}%`;
-                        }
-                    } catch(e) {}
-                }, 500);
-
-            } catch (err) {
-                statusBox.innerText = "خطأ: " + err.message;
+            if (ghosts.length > 0) {
+                // وجدنا المتغير!
+                let foundName = ghosts[ghosts.length - 1]; // عادة يكون الأخير
+                statusBox.innerHTML = `✅ <b>وجدته!</b><br>الاسم هو: <span style="color:blue">${foundName}</span>`;
+                statusBox.style.background = "#d4edda";
+                statusBox.style.color = "#155724";
+                
+                // محاولة تشغيل الكاميرا باستخدام الاسم المكتشف
+                window.DetectedClass = window[foundName];
+                btn.innerText = "تشغيل الكاميرا الآن";
+                btn.classList.add('ready');
+                btn.disabled = false;
+                btn.onclick = startCamera;
+            } else {
+                statusBox.innerHTML = "👻 <b>غريب!</b> الملف تحمل لكنه فارغ أو لم يضف شيئاً.";
             }
+        }
+
+        async function startCamera() {
+            document.body.innerHTML = '<video id="webcam" autoplay playsinline muted style="width:100%;border-radius:20px;"></video><div id="res" style="font-size:30px;font-weight:bold;margin-top:20px;">جاري التحليل...</div>';
+            const video = document.getElementById('webcam');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            
+            // استخدام الاسم المكتشف
+            const classifier = new window.DetectedClass();
+            await classifier.init();
+            
+            setInterval(async () => {
+                const res = await classifier.classify(video);
+                if(res.results.length) {
+                    const best = res.results.reduce((a, b) => a.value > b.value ? a : b);
+                    document.getElementById('res').innerText = best.label + " (" + Math.round(best.value*100) + "%)";
+                }
+            }, 500);
         }
     </script>
 
-    <script src="./edge-impulse-standalone.js?v=5" onload="startDiscovery()" onerror="fileError()"></script>
+    <script src="./edge-impulse-standalone.js?v=99" onload="analyzeMemory()"></script>
 
 </body>
 </html>
