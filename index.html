@@ -3,92 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صائد الأشباح البرمجي</title>
+    <title>الفحص الطبي الذكي</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
         .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        #status-box { 
-            margin: 20px 0; padding: 15px; border-radius: 10px; 
-            background: #fff3cd; color: #856404; font-weight: bold; word-break: break-all;
-        }
-        button { padding: 15px; width: 100%; border: none; border-radius: 10px; background: #ccc; color: white; font-weight: bold; font-size: 18px; }
-        button.ready { background: #007bff; cursor: pointer; }
+        h2 { color: #333; margin-bottom: 20px; }
+        video { width: 100%; border-radius: 10px; background: #000; margin-bottom: 15px; }
+        button { padding: 12px 25px; background: #007bff; color: white; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; width: 100%; }
+        button:disabled { background: #ccc; }
+        #result { margin-top: 20px; font-size: 1.2em; font-weight: bold; color: #28a745; min-height: 1.5em; }
+        .error { color: red; font-size: 0.9em; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>👻 صائد الأشباح</h2>
-        <p>جاري البحث عن اسم الملف المخفي...</p>
-        <div id="status-box">⏳ لحظة من فضلك...</div>
-        <button id="btn" disabled>انتظر التحليل</button>
+        <h2>🩺 الفحص الذكي (نسخة المتصفح)</h2>
+        
+        <video id="webcam" autoplay playsinline muted></video>
+        <div id="result">جاري التحميل...</div>
+        <button id="runBtn" disabled>ابدأ الفحص</button>
+        <div id="errorMsg" class="error"></div>
     </div>
 
+    <script src="edge-impulse-standalone.js"></script>
+
     <script>
-        const statusBox = document.getElementById('status-box');
-        const btn = document.getElementById('btn');
-        
-        // 1. تسجيل محتويات الذاكرة الحالية (قبل تحميل الملف)
-        window.initialKeys = Object.keys(window);
+        // إعدادات الكلاس (يعمل تلقائياً مع نسخة Browser)
+        const runBtn = document.getElementById('runBtn');
+        const resultEl = document.getElementById('result');
+        const errorEl = document.getElementById('errorMsg');
+        let classifier;
 
-        // 2. صائد الأخطاء المخفية
-        window.onerror = function(message, source, lineno, colno, error) {
-            statusBox.innerHTML = `🚨 <b>تم كشف خطأ:</b><br>${message}`;
-            statusBox.style.background = "#f8d7da";
-            statusBox.style.color = "#721c24";
-            return true;
-        };
+        async function init() {
+            try {
+                // 1. التأكد من وجود المكتبة
+                if (!window.EdgeImpulseClassifier) {
+                    throw new Error("لم يتم العثور على المكتبة. تأكد من رفع ملف edge-impulse-standalone.js");
+                }
 
-        // 3. دالة التحليل بعد التحميل
-        function analyzeMemory() {
-            console.log("File loaded. Analyzing...");
-            
-            // مقارنة الذاكرة الجديدة بالقديمة
-            const currentKeys = Object.keys(window);
-            const newVars = currentKeys.filter(key => !window.initialKeys.includes(key));
-            
-            // تصفية المتغيرات غير المهمة
-            const ghosts = newVars.filter(k => k !== 'initialKeys' && k !== 'analyzeMemory' && k !== 'onerror');
+                // 2. تشغيل المصنف
+                classifier = new EdgeImpulseClassifier();
+                await classifier.init();
 
-            if (ghosts.length > 0) {
-                // وجدنا المتغير!
-                let foundName = ghosts[ghosts.length - 1]; // عادة يكون الأخير
-                statusBox.innerHTML = `✅ <b>وجدته!</b><br>الاسم هو: <span style="color:blue">${foundName}</span>`;
-                statusBox.style.background = "#d4edda";
-                statusBox.style.color = "#155724";
-                
-                // محاولة تشغيل الكاميرا باستخدام الاسم المكتشف
-                window.DetectedClass = window[foundName];
-                btn.innerText = "تشغيل الكاميرا الآن";
-                btn.classList.add('ready');
-                btn.disabled = false;
-                btn.onclick = startCamera;
-            } else {
-                statusBox.innerHTML = "👻 <b>غريب!</b> الملف تحمل لكنه فارغ أو لم يضف شيئاً.";
+                // 3. تشغيل الكاميرا
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" }, 
+                    audio: false 
+                });
+                document.getElementById('webcam').srcObject = stream;
+
+                resultEl.innerText = "النظام جاهز ✅";
+                runBtn.innerText = "التقط وافحص";
+                runBtn.disabled = false;
+
+                // عند الضغط على الزر
+                runBtn.onclick = async () => {
+                    resultEl.innerText = "جاري التحليل...";
+                    try {
+                        const res = await classifier.classify(document.getElementById('webcam'));
+                        
+                        if (res.results && res.results.length > 0) {
+                            // ترتيب النتائج واختيار الأفضل
+                            const best = res.results.reduce((a, b) => a.value > b.value ? a : b);
+                            resultEl.innerHTML = `النتيجة: ${best.label} <br> الثقة: ${Math.round(best.value * 100)}%`;
+                        } else {
+                            resultEl.innerText = "لم يتم التعرف على شيء";
+                        }
+                    } catch (e) {
+                        resultEl.innerText = "حدث خطأ أثناء الفحص";
+                        console.error(e);
+                    }
+                };
+
+            } catch (err) {
+                console.error(err);
+                resultEl.innerText = "❌ حدث خطأ";
+                errorEl.innerText = err.message;
             }
         }
 
-        async function startCamera() {
-            document.body.innerHTML = '<video id="webcam" autoplay playsinline muted style="width:100%;border-radius:20px;"></video><div id="res" style="font-size:30px;font-weight:bold;margin-top:20px;">جاري التحليل...</div>';
-            const video = document.getElementById('webcam');
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            video.srcObject = stream;
-            
-            // استخدام الاسم المكتشف
-            const classifier = new window.DetectedClass();
-            await classifier.init();
-            
-            setInterval(async () => {
-                const res = await classifier.classify(video);
-                if(res.results.length) {
-                    const best = res.results.reduce((a, b) => a.value > b.value ? a : b);
-                    document.getElementById('res').innerText = best.label + " (" + Math.round(best.value*100) + "%)";
-                }
-            }, 500);
-        }
+        // بدء التشغيل
+        init();
     </script>
-
-    <script src="./edge-impulse-standalone.js?v=99" onload="analyzeMemory()"></script>
-
 </body>
 </html>
