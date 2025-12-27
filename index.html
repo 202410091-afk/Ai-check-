@@ -3,141 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فاحص الجلد (النسخة المستقرة)</title>
+    <title>المكتشف الذكي</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; text-align: center; padding: 20px; color: #333; }
-        .container { max-width: 420px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; margin-bottom: 20px; }
-        video { width: 100%; border-radius: 15px; border: 4px solid #eef2f3; background: #000; min-height: 300px; object-fit: cover; }
+        body { font-family: sans-serif; background-color: #f8f9fa; text-align: center; padding: 20px; color: #333; }
+        .container { max-width: 420px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        video { width: 100%; border-radius: 15px; background: #000; min-height: 250px; }
         
         #status-box { 
-            margin: 20px 0; 
+            margin: 15px 0; 
             padding: 15px; 
-            border-radius: 12px; 
+            border-radius: 10px; 
             font-weight: bold; 
-            background: #e2e6ea; 
-            color: #495057;
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            background: #e9ecef; 
+            font-size: 0.95rem;
+            word-wrap: break-word; /* لضمان عدم خروج النص الطويل */
         }
 
         button {
-            padding: 18px 30px;
+            padding: 15px;
             font-size: 1.1rem;
             border: none;
             border-radius: 12px;
-            cursor: pointer;
             width: 100%;
             font-weight: bold;
             color: white;
-            background-color: #adb5bd; /* رمادي */
-            pointer-events: none; /* غير قابل للنقر */
-            transition: all 0.3s;
+            background-color: #6c757d; /* رمادي */
+            pointer-events: none;
+            transition: 0.3s;
         }
 
-        /* الزر الجاهز */
-        button.ready {
-            background-color: #007bff; /* أزرق */
-            pointer-events: auto;
-            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
-        }
-        button.ready:active { transform: scale(0.98); }
-        
-        .loading-spinner { display: inline-block; width: 15px; height: 15px; border: 3px solid rgba(0,0,0,0.3); border-radius: 50%; border-top-color: #000; animation: spin 1s ease-in-out infinite; margin-left: 10px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        button.ready { background-color: #28a745; pointer-events: auto; } /* أخضر */
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>🩺 الفحص الذكي للجلد</h2>
+        <h3>🔍 المكتشف الذكي للملفات</h3>
         
-        <div style="position: relative;">
-            <video id="webcam" autoplay playsinline muted></video>
-        </div>
+        <video id="webcam" autoplay playsinline muted></video>
 
-        <div id="status-box">
-            <span class="loading-spinner"></span> جاري تهيئة النظام... انتظر
-        </div>
+        <div id="status-box">⏳ جاري البحث عن اسم المعالج...</div>
 
-        <button id="startBtn">جاري تحميل الملفات (0%)...</button>
+        <button id="startBtn">انتظر قليلاً...</button>
     </div>
 
     <script>
         const statusBox = document.getElementById('status-box');
         const btn = document.getElementById('startBtn');
-        let classifier;
+        let FoundClass = null; // هنا سنخزن الاسم الصحيح الذي سنجده
 
-        // دالة النجاح
-        window.onModelLoaded = function() {
-            console.log("Model Loaded Successfully!");
-            statusBox.innerHTML = "✅ النظام جاهز تماماً!";
-            statusBox.style.background = "#d1e7dd"; 
-            statusBox.style.color = "#0f5132";
+        // دالة تعمل عند انتهاء تحميل الملف
+        window.startDiscovery = function() {
+            console.log("File loaded. Starting discovery...");
             
-            btn.innerText = "تشغيل الكاميرا 📸";
+            // 1. البحث عن الأسماء المحتملة في ذاكرة المتصفح
+            const candidates = Object.keys(window).filter(key => 
+                key.toLowerCase().includes('edge') || 
+                key.toLowerCase().includes('impulse') ||
+                key.toLowerCase().includes('classifier')
+            );
+
+            // 2. محاولة تحديد الاسم الصحيح
+            if (window.EdgeImpulseClassifier) {
+                FoundClass = window.EdgeImpulseClassifier;
+                statusBox.innerHTML = "✅ تم العثور عليه باسم: <br> EdgeImpulseClassifier";
+            } else if (candidates.length > 0) {
+                // نأخذ أول اسم نجده يبدو صحيحاً
+                FoundClass = window[candidates[0]];
+                statusBox.innerHTML = `✅ وجدنا اسماً بديلاً: <br> ${candidates[0]}`;
+                console.log("Found alternative:", candidates[0]);
+            } else {
+                statusBox.innerHTML = "⚠️ الملف تحمل، لكن الاسم مخفي! <br> جرب تحميل الصفحة.";
+                statusBox.style.background = "#fff3cd";
+                return;
+            }
+
+            // 3. تفعيل الزر
+            statusBox.style.background = "#d4edda"; 
+            statusBox.style.color = "#155724";
+            btn.innerText = "تشغيل النظام الآن 🚀";
             btn.classList.add('ready');
-            
-            // إضافة أمر التشغيل للزر
-            btn.onclick = startCamera;
+            btn.onclick = runSystem;
         };
 
-        // دالة الفشل
-        window.onModelError = function() {
-            statusBox.innerText = "❌ تعذر تحميل الملفات. هل النت ضعيف؟";
+        // دالة الخطأ
+        window.fileError = function() {
+            statusBox.innerText = "❌ فشل تحميل ملف JS. تأكد من الاسم في GitHub.";
             statusBox.style.background = "#f8d7da";
-            statusBox.style.color = "#842029";
-            btn.innerText = "فشل التحميل";
         };
 
-        async function startCamera() {
-            const video = document.getElementById('webcam');
-            btn.style.display = 'none'; // إخفاء الزر
-            statusBox.innerText = "جاري تشغيل الكاميرا...";
-
+        async function runSystem() {
+            btn.style.display = 'none';
+            statusBox.innerText = "📸 الكاميرا تعمل... جاري التحليل";
+            
             try {
-                // طلب الإذن للكاميرا
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-                video.srcObject = stream;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                document.getElementById('webcam').srcObject = stream;
 
-                // بدء المعالجة
-                statusBox.innerText = "🧠 جاري تحليل الصورة...";
-                classifier = new EdgeImpulseClassifier();
+                // استخدام الاسم الذي اكتشفناه
+                const classifier = new FoundClass();
                 await classifier.init();
 
-                statusBox.innerHTML = "وجه الكاميرا بوضوح على الجلد <br> (اقترب قليلاً)";
-                statusBox.style.background = "#fff";
-                statusBox.style.border = "2px solid #007bff";
+                statusBox.innerText = "وجه الكاميرا على الجلد...";
+                statusBox.style.background = "white";
+                statusBox.style.border = "2px solid #28a745";
 
-                // حلقة الفحص
                 setInterval(async () => {
                     try {
-                        const results = await classifier.classify(video);
+                        const results = await classifier.classify(document.getElementById('webcam'));
                         if (results.results.length > 0) {
-                            // العثور على أفضل نتيجة
                             const best = results.results.reduce((a, b) => a.value > b.value ? a : b);
-                            
-                            // تحديث الشاشة
-                            statusBox.innerHTML = `
-                                <div style="font-size: 1.4rem; color: #007bff;">${best.label}</div>
-                                <div style="font-size: 0.9rem; color: #6c757d;">نسبة التطابق: ${(best.value * 100).toFixed(1)}%</div>
-                            `;
+                            statusBox.innerHTML = `<span style="font-size:1.5rem;color:#28a745">${best.label}</span> <br> ${Math.round(best.value * 100)}%`;
                         }
-                    } catch (e) {
-                        // تجاهل الأخطاء الصغيرة أثناء الحركة
-                    }
+                    } catch(e) {}
                 }, 500);
 
             } catch (err) {
                 statusBox.innerText = "خطأ: " + err.message;
-                alert("تأكد من السماح للكاميرا بالعمل");
             }
         }
     </script>
 
-    <script src="./edge-impulse-standalone.js?v=3" onload="window.onModelLoaded()" onerror="window.onModelError()"></script>
+    <script src="./edge-impulse-standalone.js?v=5" onload="startDiscovery()" onerror="fileError()"></script>
 
 </body>
 </html>
