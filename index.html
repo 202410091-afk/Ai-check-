@@ -3,64 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فاحص الجلد النهائي</title>
+    <title>فحص الملفات</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        video { width: 100%; max-width: 400px; border-radius: 15px; border: 3px solid #333; }
-        #status { font-size: 1.2rem; margin: 20px; font-weight: bold; color: #333; padding: 10px; background: #fff; border-radius: 8px; }
-        button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        body { background-color: #0d1b2a; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { background: #1b263b; padding: 20px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 2px solid #415a77; }
+        h3 { color: #e0e1dd; margin-bottom: 5px; }
+        p { font-size: 18px; font-weight: bold; }
+        .success { color: #4cc9f0; } /* أزرق فاتح للنجاح */
+        .error { color: #e63946; } /* أحمر للفشل */
     </style>
 </head>
 <body>
 
-    <h2>التشخيص الذكي (المحاولة النهائية)</h2>
-    <video id="webcam" autoplay playsinline muted></video>
-    <div id="status">جاهز.. اضغط تشغيل</div>
-    <button onclick="init()">تشغيل النظام</button>
+    <h2>🕵️ محقق الملفات</h2>
+    <p>سيقوم هذا الكود بفحص ما إذا كانت ملفات الذكاء الاصطناعي موجودة ومقروءة.</p>
 
-    <script src="https://202410091-afk.github.io/Ai-check-/edge-impulse-standalone.js"></script>
+    <div class="box">
+        <h3>1. ملف التشغيل (JS)</h3>
+        <p id="js-status">⏳ جاري البحث...</p>
+    </div>
+
+    <div class="box">
+        <h3>2. ملف العقل (WASM)</h3>
+        <p id="wasm-status">⏳ جاري البحث...</p>
+    </div>
+
+    <div id="final-result" style="margin-top: 30px; font-size: 20px;"></div>
 
     <script>
-        async function init() {
-            const status = document.getElementById('status');
-            const video = document.getElementById('webcam');
-
+        async function checkFile(filename, elementId) {
+            const el = document.getElementById(elementId);
             try {
-                // 1. الكاميرا
-                status.innerText = "1. جاري تشغيل الكاميرا...";
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                video.srcObject = stream;
-
-                // 2. فحص ملف JS
-                status.innerText = "2. جاري البحث عن ملف التشغيل...";
-                if (typeof EdgeImpulseClassifier === 'undefined') {
-                    throw new Error("ملف JS غير موجود! تأكد من أن الرابط صحيح أو الملف مرفوع.");
-                }
-
-                // 3. تحميل الموديل
-                status.innerText = "3. جاري تحميل الذكاء (8MB)... قد يأخذ دقيقة";
-                const classifier = new EdgeImpulseClassifier();
-                await classifier.init();
+                // محاولة الاتصال بالملف
+                const response = await fetch('./' + filename);
                 
-                status.innerText = "✅ تم الاتصال بنجاح! وجه الكاميرا";
-                status.style.color = "green";
-
-                // 4. التصنيف
-                setInterval(async () => {
-                    const result = await classifier.classify(video);
-                    if (result.results.length > 0) {
-                        const top = result.results[0];
-                        status.innerText = `${top.label} (${(top.value * 100).toFixed(0)}%)`;
-                    }
-                }, 1000);
-
-            } catch (error) {
-                // هنا سيظهر لنا سبب المشكلة الحقيقي
-                status.innerText = "🛑 خطأ: " + error.message;
-                status.style.color = "red";
-                console.error(error);
+                if (response.ok) {
+                    el.innerText = "✅ موجود (تم العثور عليه)";
+                    el.className = "success";
+                    return true;
+                } else {
+                    el.innerText = "❌ غير موجود (خطأ 404)";
+                    el.className = "error";
+                    return false;
+                }
+            } catch (e) {
+                el.innerText = "❌ خطأ في الاتصال";
+                el.className = "error";
+                return false;
             }
         }
+
+        async function runCheck() {
+            const jsOk = await checkFile('edge-impulse-standalone.js', 'js-status');
+            const wasmOk = await checkFile('edge-impulse-standalone.wasm', 'wasm-status');
+
+            const res = document.getElementById('final-result');
+            if (jsOk && wasmOk) {
+                res.innerHTML = "🎉 <b>كل شيء سليم!</b><br>المشكلة كانت في المتصفح فقط.<br>سأعطيك كود التشغيل فوراً.";
+                res.style.color = "#4cc9f0";
+            } else {
+                res.innerHTML = "⚠️ <b>هناك ملف ناقص!</b><br>تأكد من الاسم في GitHub.";
+                res.style.color = "#e63946";
+            }
+        }
+
+        runCheck();
     </script>
 </body>
 </html>
