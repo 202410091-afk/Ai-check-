@@ -7,18 +7,18 @@
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
         video { width: 100%; max-width: 400px; border-radius: 15px; border: 3px solid #333; }
-        #status { font-size: 1.2rem; margin: 20px; font-weight: bold; color: #333; }
-        button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; }
+        #status { font-size: 1.2rem; margin: 20px; font-weight: bold; color: #333; padding: 10px; background: #fff; border-radius: 8px; }
+        button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2>التشخيص الذكي (إعادة ضبط)</h2>
+    <h2>التشخيص الذكي (المحاولة النهائية)</h2>
     <video id="webcam" autoplay playsinline muted></video>
-    <div id="status">اضغط تشغيل للبدء...</div>
-    <button onclick="init()">تشغيل الكاميرا</button>
+    <div id="status">جاهز.. اضغط تشغيل</div>
+    <button onclick="init()">تشغيل النظام</button>
 
-    <script src="./edge-impulse-standalone.js"></script>
+    <script src="https://202410091-afk.github.io/Ai-check-/edge-impulse-standalone.js"></script>
 
     <script>
         async function init() {
@@ -26,25 +26,26 @@
             const video = document.getElementById('webcam');
 
             try {
-                // 1. تشغيل الكاميرا
-                status.innerText = "جاري فتح الكاميرا...";
+                // 1. الكاميرا
+                status.innerText = "1. جاري تشغيل الكاميرا...";
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
 
-                // 2. تحميل الموديل
-                status.innerText = "جاري تحميل الذكاء الاصطناعي (8MB)... انتظر";
-                
-                if (!window.EdgeImpulseClassifier) {
-                    throw new Error("جاري انتظار تحميل ملف الـ JS...");
+                // 2. فحص ملف JS
+                status.innerText = "2. جاري البحث عن ملف التشغيل...";
+                if (typeof EdgeImpulseClassifier === 'undefined') {
+                    throw new Error("ملف JS غير موجود! تأكد من أن الرابط صحيح أو الملف مرفوع.");
                 }
 
+                // 3. تحميل الموديل
+                status.innerText = "3. جاري تحميل الذكاء (8MB)... قد يأخذ دقيقة";
                 const classifier = new EdgeImpulseClassifier();
                 await classifier.init();
                 
-                status.innerText = "✅ تم التحميل! وجه الكاميرا للجلد";
+                status.innerText = "✅ تم الاتصال بنجاح! وجه الكاميرا";
                 status.style.color = "green";
 
-                // 3. بدء التحليل
+                // 4. التصنيف
                 setInterval(async () => {
                     const result = await classifier.classify(video);
                     if (result.results.length > 0) {
@@ -54,7 +55,10 @@
                 }, 1000);
 
             } catch (error) {
-                status.innerText = "انتظر قليلاً ثم اضغط تشغيل مرة أخرى...";
+                // هنا سيظهر لنا سبب المشكلة الحقيقي
+                status.innerText = "🛑 خطأ: " + error.message;
+                status.style.color = "red";
+                console.error(error);
             }
         }
     </script>
