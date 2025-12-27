@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاحص الجلد النهائي</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        video { width: 100%; max-width: 400px; border-radius: 15px; border: 3px solid #333; }
+        #status { font-size: 1.2rem; margin: 20px; font-weight: bold; color: #333; }
+        button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+    <h2>التشخيص الذكي (إعادة ضبط)</h2>
+    <video id="webcam" autoplay playsinline muted></video>
+    <div id="status">اضغط تشغيل للبدء...</div>
+    <button onclick="init()">تشغيل الكاميرا</button>
+
+    <script src="./edge-impulse-standalone.js"></script>
+
+    <script>
+        async function init() {
+            const status = document.getElementById('status');
+            const video = document.getElementById('webcam');
+
+            try {
+                // 1. تشغيل الكاميرا
+                status.innerText = "جاري فتح الكاميرا...";
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+
+                // 2. تحميل الموديل
+                status.innerText = "جاري تحميل الذكاء الاصطناعي (8MB)... انتظر";
+                
+                // فحص بسيط للتأكد من وجود الملف
+                if (!window.EdgeImpulseClassifier) {
+                    throw new Error("ملف التشغيل (js) غير موجود أو اسمه خطأ!");
+                }
+
+                const classifier = new EdgeImpulseClassifier();
+                await classifier.init();
+                
+                status.innerText = "✅ تم التحميل! وجه الكاميرا للجلد";
+                status.style.color = "green";
+
+                // 3. بدء التحليل
+                setInterval(async () => {
+                    const result = await classifier.classify(video);
+                    if (result.results.length > 0) {
+                        const top = result.results[0];
+                        status.innerText = `${top.label} (${(top.value * 100).toFixed(0)}%)`;
+                    }
+                }, 1000);
+
+            } catch (error) {
+                status.innerText = "خطأ: " + error.message;
+                status.style.color = "red";
+            }
+        }
+    </script>
+</body>
+</html>
