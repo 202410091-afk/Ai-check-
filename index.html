@@ -1,143 +1,126 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فاحص الجلد الذكي</title>
+    <title>تشخيص الجلد النهائي</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            color: #333; 
-            text-align: center; 
-            padding: 20px; 
-            margin: 0;
-        }
-        h2 { color: #2c3e50; margin-bottom: 10px; }
+        body { font-family: sans-serif; background-color: #f4f4f9; text-align: center; padding: 20px; color: #333; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        video { width: 100%; border-radius: 10px; border: 3px solid #ddd; background: #000; min-height: 250px; }
         
-        /* إطار الكاميرا */
-        .video-container {
-            position: relative;
-            width: 100%;
-            max-width: 350px;
-            margin: 0 auto;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            border: 5px solid #fff;
-            background: #000;
-            min-height: 300px;
-        }
-        
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* مربع النتيجة */
-        #result-box {
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #555;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        #status-box { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            background: #e9ecef; 
         }
 
-        /* الزر */
         button {
-            margin-top: 20px;
-            padding: 15px 40px;
-            background: #007bff;
-            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
             border: none;
             border-radius: 50px;
-            font-size: 1.1rem;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
-            transition: transform 0.2s;
+            transition: 0.3s;
+            width: 100%;
+            font-weight: bold;
         }
-        button:active { transform: scale(0.95); }
+
+        /* حالة الزر غير المفعل */
+        button:disabled { background-color: #ccc; color: #666; cursor: not-allowed; }
+        
+        /* حالة الزر المفعل */
+        button.ready { background-color: #007bff; color: white; }
+        button.ready:active { transform: scale(0.95); }
+
     </style>
 </head>
 <body>
 
-    <h2>🩺 الفحص الذكي للجلد</h2>
-    
-    <div class="video-container">
+    <div class="container">
+        <h2>🩺 الفحص النهائي</h2>
+        
         <video id="webcam" autoplay playsinline muted></video>
+
+        <div id="status-box">⏳ جاري تحميل ملفات الذكاء...</div>
+
+        <button id="startBtn" onclick="startCamera()" disabled>انتظر قليلاً...</button>
     </div>
 
-    <div id="result-box">اضغط "بدء التشغيل" بالأسفل 👇</div>
-
-    <button id="startBtn" onclick="startApp()">بدء التشغيل</button>
-
-    <script src="./edge-impulse-standalone.js"></script>
+    <script src="./edge-impulse-standalone.js" onload="libraryLoaded()" onerror="libraryError()"></script>
 
     <script>
-        async function startApp() {
-            const status = document.getElementById('result-box');
-            const btn = document.getElementById('startBtn');
-            const video = document.getElementById('webcam');
+        const statusBox = document.getElementById('status-box');
+        const btn = document.getElementById('startBtn');
+        let classifier;
 
-            // إخفاء الزر أثناء التحميل
-            btn.style.display = 'none';
-            status.innerText = "⏳ جاري تشغيل النظام... (انتظر)";
-            status.style.color = "#e67e22"; // برتقالي
+        // 1. هذه الدالة تعمل تلقائياً بمجرد تحميل الملف بنجاح
+        function libraryLoaded() {
+            statusBox.innerText = "✅ الملفات جاهزة! اضغط الزر الأزرق.";
+            statusBox.style.background = "#d4edda"; // أخضر فاتح
+            statusBox.style.color = "#155724";
+            
+            btn.innerText = "تشغيل الكاميرا والفحص";
+            btn.disabled = false; // تفعيل الزر
+            btn.classList.add('ready');
+        }
+
+        // في حال فشل تحميل الملف
+        function libraryError() {
+            statusBox.innerText = "❌ فشل تحميل الملف! تأكد من النت.";
+            statusBox.style.background = "#f8d7da";
+            statusBox.style.color = "#721c24";
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('webcam');
+            btn.style.display = 'none'; // إخفاء الزر
+            statusBox.innerText = "📸 جاري تشغيل الكاميرا...";
 
             try {
-                // 1. تشغيل الكاميرا
+                // تشغيل الكاميرا الخلفية
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" }, 
-                    audio: false 
+                    video: { facingMode: "environment" } 
                 });
                 video.srcObject = stream;
 
-                // 2. تشغيل الذكاء الاصطناعي
-                status.innerText = "🧠 جاري تحميل نموذج الذكاء...";
+                statusBox.innerText = "🧠 جاري تهيئة العقل الإلكتروني...";
                 
-                if (!window.EdgeImpulseClassifier) {
-                    throw new Error("لم يتم تحميل ملف المعالجة بعد، حاول تحديث الصفحة.");
-                }
-
-                const classifier = new EdgeImpulseClassifier();
+                // بدء الذكاء الاصطناعي
+                classifier = new EdgeImpulseClassifier();
                 await classifier.init();
 
-                status.innerText = "✅ النظام يعمل! وجه الكاميرا للجلد";
-                status.style.color = "#27ae60"; // أخضر
+                statusBox.innerText = "وجه الكاميرا على الجلد الآن...";
+                statusBox.style.background = "#fff3cd"; // أصفر
+                statusBox.style.color = "#856404";
 
-                // 3. حلقة التصنيف المستمر
+                // حلقة الفحص المستمر
                 setInterval(async () => {
                     try {
-                        const result = await classifier.classify(video);
-                        
-                        if (result.results && result.results.length > 0) {
-                            // ترتيب النتائج واختيار الأعلى
-                            const topResult = result.results.reduce((prev, current) => {
-                                return (prev.value > current.value) ? prev : current;
-                            });
-
-                            // عرض النتيجة فقط إذا كانت الثقة أعلى من 50%
-                            if (topResult.value > 0.50) {
-                                status.innerText = `🔍 ${topResult.label} (${Math.round(topResult.value * 100)}%)`;
-                                status.style.color = "#333";
-                            } else {
-                                status.innerText = "غير متأكد.. اقترب أكثر";
-                                status.style.color = "#7f8c8d";
-                            }
+                        const results = await classifier.classify(video);
+                        if (results.results.length > 0) {
+                            // ترتيب النتائج واختيار الأفضل
+                            const best = results.results.reduce((a, b) => a.value > b.value ? a : b);
+                            
+                            // عرض النتيجة
+                            statusBox.innerHTML = `
+                                <span style="font-size: 24px; display:block; margin-bottom:5px;">${best.label}</span>
+                                <span style="font-size: 16px; color: #555;">الدقة: ${(best.value * 100).toFixed(1)}%</span>
+                            `;
+                            statusBox.style.background = "#fff";
+                            statusBox.style.border = "2px solid #007bff";
                         }
                     } catch (e) {
-                        console.error("خطأ أثناء التصنيف:", e);
+                        console.log("Reading...");
                     }
                 }, 500); // فحص كل نصف ثانية
 
-            } catch (error) {
-                status.innerHTML = "⚠️ خطأ: " + error.message;
-                status.style.color = "red";
-                btn.style.display = 'inline-block'; // إظهار الزر للمحاولة مرة أخرى
+            } catch (err) {
+                statusBox.innerText = "⚠️ خطأ: " + err.message;
+                statusBox.style.color = "red";
+                btn.style.display = 'block';
                 btn.innerText = "حاول مرة أخرى";
             }
         }
